@@ -1,0 +1,4 @@
+---
+- src: idealista.redis_role
+  version: 4.0.3
+  name: redis

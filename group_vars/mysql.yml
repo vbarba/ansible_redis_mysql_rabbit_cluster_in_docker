@@ -1,0 +1,10 @@
+---
+mysql_replication_master: 'mysql-master'
+mysql_replication_user:
+  name: replication
+  password: secret
+mysql_users: 
+  - name: replication
+    host: "%"
+    password: secret
+    priv: "*.*:ALL"

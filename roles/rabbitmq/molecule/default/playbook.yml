@@ -1,0 +1,47 @@
+---
+## test a standalone installation
+- name: Converge
+  hosts: standaloneinst
+  roles:
+    - role: ansible-rabbitmq-minimalistic
+  post_tasks:
+    - name: Check RabbitMQ connectivity
+      command: rabbitmq-diagnostics -q check_port_connectivity
+      register: portconnstat
+      changed_when: false
+      failed_when: portconnstat.rc != 0
+    - name: Check that RabbitMQ management plugin is enabled
+      command: rabbitmq-plugins is_enabled rabbitmq_management --offline
+      register: rmqmgten
+      changed_when: false
+      failed_when: "'Plugin rabbitmq_management is enabled' not in rmqmgten.stdout"
+  vars:
+    rabbitmq_conf_template: "molecule/default/tests/fixtures/rabbitmq.conf.j2"
+    rabbitmq_enabled_plugins_template: "molecule/default/tests/fixtures/enabled_plugins.j2"
+
+## test a clustered installation
+# create cluster
+- name: Converge
+  hosts: group1
+  serial: 1
+  roles:
+    - role: ansible-rabbitmq-minimalistic
+  vars:
+    rabbitmq_conf_template: "molecule/default/tests/fixtures/rabbitmq.conf.cluster.j2"
+    rabbitmq_erlang_cookie: "XXXXXXXXXXXXXXXXXXXX"
+# check cluster
+- name: Converge
+  hosts: group1
+  tasks:
+    - name: Check erlang cookie
+      command: cat /var/lib/rabbitmq/.erlang.cookie
+      register: erlcookiecon
+      changed_when: false
+      failed_when: ("XXXXXXXXXXXXXXXXXXXX" not in erlcookiecon.stdout)
+    - name: Check RabbitMQ cluster status
+      command: rabbitmqctl cluster_status
+      register: clusterstatus
+      changed_when: false
+      failed_when: ("debian-instance-1" not in clusterstatus.stdout) or
+                   ("debian-instance-2" not in clusterstatus.stdout) or
+                   ("debian-instance-3" not in clusterstatus.stdout)

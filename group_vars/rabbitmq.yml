@@ -1,0 +1,3 @@
+---
+rabbitmq_conf_template: "templates/rabbitmq.conf.cluster.j2"
+rabbitmq_erlang_cookie: "XXXXXXXXXXXXXXXXXXXX"

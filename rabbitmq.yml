@@ -1,0 +1,46 @@
+---
+- hosts: default
+  become: true
+  tasks:
+    - name: Create a network
+      docker_network:
+        name: rabbitmq-network
+    - name: Create docker container
+      docker_container:
+        name: "rabbitmq-{{ item }}"
+        image: geerlingguy/docker-ubuntu1804-ansible
+        privileged: true
+        hostname: "rabbitmq-{{ item }}"
+        volumes:
+          - '/sys/fs/cgroup:/sys/fs/cgroup:ro'
+          - '/mnt/rabbitmq-{{item}}:/var/lib/rabbitmq'
+        tmpfs:
+          - /tmp
+          - /run
+        networks:
+          - name: "rabbitmq-network"
+      with_sequence: count=3
+
+    - name: add container to inventory
+      add_host:
+        hostname: "rabbitmq-{{ item }}"
+        groups: rabbitmq
+        ansible_connection: docker
+      with_sequence: count=3
+
+- hosts: rabbitmq
+  tasks:
+  - name: Update apt cache
+    apt:
+      update_cache: yes
+
+- hosts: rabbitmq
+  serial: 1
+  roles:
+    - rabbitmq
+  vars:
+    rabbitmq_conf_template: "templates/rabbitmq.conf.cluster.j2"
+    rabbitmq_erlang_cookie: "XXXXXXXXXXXXXXXXXXXX"
+
+
+

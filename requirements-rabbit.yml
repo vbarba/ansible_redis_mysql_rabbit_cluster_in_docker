@@ -1,0 +1,5 @@
+# NOT IN USE. ROLE IMPORTED AND MODIFIED
+
+---
+- src: marcobellaccini.ansible_rabbitmq_minimalistic
+  name: rabbit

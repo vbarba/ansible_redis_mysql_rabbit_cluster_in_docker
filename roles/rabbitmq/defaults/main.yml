@@ -1,0 +1,5 @@
+---
+# defaults file for ansible-rabbitmq-minimalistic
+
+# maximum number of open files OS limit - this works only with systemd
+rabbitmq_limitnofile: 300000

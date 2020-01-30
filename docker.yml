@@ -1,0 +1,9 @@
+---
+- hosts: default
+  become: true
+  tasks:
+    - name: Install required system packages
+      apt: name=python3-pip state=latest update_cache=yes    
+    - name: Install Docker Module for Python
+      pip:
+        name: docker

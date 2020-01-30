@@ -1,0 +1,22 @@
+---
+# handlers file for ansible-rabbitmq-minimalistic
+
+- name: Systemd daemon reload and RabbitMQ service restart
+  systemd:
+    name: rabbitmq-server
+    state: restarted
+    daemon_reload: yes  # this is to update OS limits
+
+- name: Restart RabbitMQ
+  service:
+    name: rabbitmq-server
+    state: restarted
+
+- name: Stop app
+  command: rabbitmqctl stop_app
+
+- name: Reset node
+  command: rabbitmqctl reset
+
+- name: Start app
+  command: rabbitmqctl start_app

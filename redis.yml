@@ -1,0 +1,33 @@
+---
+- hosts: default
+  become: true
+  tasks:
+    - name: Create a network
+      docker_network:
+        name: redis-cluster-network
+    - name: Create docker container
+      docker_container:
+        name: "redis-{{ item }}"
+        image: geerlingguy/docker-ubuntu1804-ansible
+        privileged: true
+        volumes:
+          - '/sys/fs/cgroup:/sys/fs/cgroup:ro'
+          - "/mnt/redis-{{ item }}:/usr/local/etc/redis"
+        tmpfs:
+          - /redis
+          - /tmp
+          - /run
+        networks:
+          - name: "redis-cluster-network"
+      with_sequence: count=6
+
+    - name: add container to inventory
+      add_host:
+        hostname: "redis-{{ item }}"
+        groups: redis
+        ansible_connection: docker
+      with_sequence: count=6
+
+- hosts: redis
+  roles:
+    - redis

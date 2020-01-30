@@ -1,0 +1,54 @@
+---
+- hosts: default
+  become: true
+  tasks:
+    - name: Create a network
+      docker_network:
+        name: mysql-network
+    - name: Create docker container
+      docker_container:
+        name: "{{ item }}"
+        image: geerlingguy/docker-ubuntu1804-ansible
+        privileged: true
+        volumes:
+          - '/sys/fs/cgroup:/sys/fs/cgroup:ro'
+          - '/mnt/{{item}}:/var/lib/mysql'
+          - '/mnt/{{item}}-root:/root'
+        tmpfs:
+          - /tmp
+          - /run
+        networks:
+          - name: "mysql-network"
+      loop:
+        - mysql-master
+        - mysql-slave
+
+    - name: add container to inventory
+      add_host:
+        hostname: "{{ item }}"
+        groups: mysql
+        ansible_connection: docker
+      loop:
+        - mysql-master
+        - mysql-slave
+
+- hosts: mysql
+  tasks:
+  - name: Install python3-mysqldb
+    apt:
+      update_cache: yes
+      name: python3-mysqldb
+
+- hosts: mysql-master
+  vars:
+    mysql_replication_role: 'master'
+    mysql_server_id: "1"
+  roles:
+    - mysql
+
+- hosts: mysql-slave
+  vars:
+    mysql_replication_role: 'slave'
+    mysql_server_id: "2"
+  roles:
+    - mysql   

@@ -1,0 +1,87 @@
+---
+# tasks file for ansible-rabbitmq-minimalistic
+
+# install dirmngr (required by apt-key) and apt-transport-https
+- name: Install pre-requisites
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - dirmngr
+      - apt-transport-https
+
+- name: Add RabbitMQ apt key
+  apt_key:
+    url: https://github.com/rabbitmq/signing-keys/releases/download/2.0/rabbitmq-release-signing-key.asc
+    id: 0A9AF2115F4687BD29803A206B73A36E6026DFCA
+    state: present
+
+- name: Add RabbitMQ Erlang apt repository
+  apt_repository:
+    # bionic repo is the correct one for buster
+    repo: "deb https://dl.bintray.com/rabbitmq-erlang/debian bionic erlang"
+    state: present
+
+- name: Add RabbitMQ apt repository
+  apt_repository:
+    # bionic repo is the correct one for buster
+    repo: "deb https://dl.bintray.com/rabbitmq/debian bionic main"
+    state: present
+
+- name: Install RabbitMQ - without starting it immediately
+  apt:
+    name: rabbitmq-server
+    state: present
+  environment:
+    RUNLEVEL: 1
+  notify:
+    - Restart RabbitMQ
+    # the following is required in order for the cluster to form
+    - Stop app
+    #- Reset node
+    - Start app
+
+- name: Ensure RabbitMQ systemd service.d folder exists
+  file:
+    path: /etc/systemd/system/rabbitmq-server.service.d
+    state: directory
+  when: ansible_service_mgr == "systemd"
+
+- name: Setup systemd limits
+  template:
+    src: limits.conf.j2
+    dest: /etc/systemd/system/rabbitmq-server.service.d/limits.conf
+  notify: Systemd daemon reload and RabbitMQ service restart
+  when: ansible_service_mgr == "systemd"
+
+- name: Deploy rabbitmq.conf from template
+  template:
+    src: "{{ rabbitmq_conf_template }}"
+    dest: /etc/rabbitmq/rabbitmq.conf
+  notify:
+    - Restart RabbitMQ
+    # the following is required in order for the cluster to form
+    - Stop app
+    #- Reset node
+    - Start app
+  when: rabbitmq_conf_template is defined
+
+- name: Deploy enabled_plugins file from template
+  template:
+    src: "{{ rabbitmq_enabled_plugins_template }}"
+    dest: /etc/rabbitmq/enabled_plugins
+  notify:
+    - Restart RabbitMQ
+  when: rabbitmq_enabled_plugins_template is defined
+
+- name: Copy erlang cookie
+  copy:
+    content: "{{ rabbitmq_erlang_cookie }}"
+    dest: /var/lib/rabbitmq/.erlang.cookie
+    owner: rabbitmq
+    group: rabbitmq
+    mode: 0400
+  notify: Restart RabbitMQ
+  no_log: True
+  when: rabbitmq_erlang_cookie is defined
